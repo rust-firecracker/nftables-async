@@ -2,6 +2,12 @@
 name = "nftables-async"
 version = "0.1.0"
 edition = "2021"
+description = "An async version of the helper to run nftables, providing full compatibility with the rest of the nftables crate"
+license = "MIT"
+keywords = ["nftables", "async"]
+categories = ["network-programming"]
+repository = "https://github.com/kanpov/nftables-async"
+readme = "README.md"
 
 [dependencies]
 nftables = "0.5.0"
