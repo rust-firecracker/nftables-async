@@ -6,12 +6,11 @@ use tokio::{io::AsyncWriteExt, process::Command};
 const NFT_DEFAULT_PROGRAM: &str = "nft";
 
 pub async fn apply_ruleset(
-    nftables: impl AsRef<Nftables>,
+    nftables: &Nftables,
     program: Option<&str>,
     args: Option<Vec<&str>>,
 ) -> Result<(), NftablesError> {
-    let payload =
-        serde_json::to_string(nftables.as_ref()).map_err(NftablesError::NftInvalidJson)?;
+    let payload = serde_json::to_string(nftables).map_err(NftablesError::NftInvalidJson)?;
     apply_ruleset_raw(payload, program, args).await
 }
 
