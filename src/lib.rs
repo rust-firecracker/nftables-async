@@ -49,6 +49,7 @@ pub async fn apply_ruleset_raw(
             program: program.to_owned(),
             inner: err,
         })?;
+    drop(stdin);
 
     match child.wait_with_output().await {
         Ok(output) if output.status.success() => Ok(()),
@@ -84,7 +85,7 @@ pub async fn get_current_ruleset_raw(
 ) -> Result<String, NftablesError> {
     let program = program.unwrap_or(NFT_DEFAULT_PROGRAM);
     let mut command = Command::new(program);
-    command.arg("list").arg("ruleset").arg("-j");
+    command.arg("-j").arg("list").arg("ruleset");
     if let Some(args) = args {
         command.args(args);
     }
@@ -104,7 +105,7 @@ pub async fn get_current_ruleset_raw(
 
         return Err(NftablesError::NftFailed {
             program: program.to_owned(),
-            hint: "getting current ruleset".to_string(),
+            hint: "getting the current ruleset".to_string(),
             stdout,
             stderr,
         });
