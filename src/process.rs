@@ -4,6 +4,8 @@ use futures_util::AsyncWrite;
 #[cfg(feature = "tokio-process")]
 use tokio_util::compat::TokioAsyncWriteCompatExt;
 
+/// A process backend to use for asynchronous I/O, supporting only the functionality needed by
+/// the nftables-async crate.
 pub trait Process: Send + Sized {
     type Stdin: AsyncWrite + Send + Unpin;
 
@@ -21,10 +23,13 @@ pub trait Process: Send + Sized {
     ) -> impl Future<Output = Result<std::process::Output, std::io::Error>> + Send;
 }
 
+/// A [Process] implementation using the tokio crate for I/O.
 #[cfg(feature = "tokio-process")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tokio-process")))]
 pub struct TokioProcess(tokio::process::Child);
 
 #[cfg(feature = "tokio-process")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tokio-process")))]
 impl Process for TokioProcess {
     type Stdin = tokio_util::compat::Compat<tokio::process::ChildStdin>;
 
@@ -62,10 +67,13 @@ impl Process for TokioProcess {
     }
 }
 
+/// A [Process] implementation using the async-process crate for I/O.
 #[cfg(feature = "async-process")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async-process")))]
 pub struct AsyncProcess(async_process::Child);
 
 #[cfg(feature = "async-process")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async-process")))]
 impl Process for AsyncProcess {
     type Stdin = async_process::ChildStdin;
 

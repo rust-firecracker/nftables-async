@@ -2,10 +2,12 @@ use futures_util::AsyncWriteExt;
 use nftables::{helper::NftablesError, schema::Nftables};
 use process::Process;
 
-const NFT_DEFAULT_PROGRAM: &str = "nft";
+/// The default "nft" program used via PATH lookup.
+pub const NFT_DEFAULT_PROGRAM: &str = "nft";
 
 pub mod process;
 
+/// Apply the given [Nftables] ruleset, optionally overriding which "nft" binary to use and adding extra arguments.
 pub async fn apply_ruleset<P: Process>(
     nftables: &Nftables,
     program: Option<&str>,
@@ -15,6 +17,7 @@ pub async fn apply_ruleset<P: Process>(
     apply_ruleset_raw::<P>(payload, program, args).await
 }
 
+/// Apply the given ruleset as a [String] payload instead of an [Nftables] reference.
 pub async fn apply_ruleset_raw<P: Process>(
     payload: String,
     program: Option<&str>,
@@ -65,6 +68,7 @@ pub async fn apply_ruleset_raw<P: Process>(
     }
 }
 
+/// Get the current ruleset as [Nftables] via, optionally overriding which "nft" binary to use and what extra arguments to pass.
 pub async fn get_current_ruleset<P: Process>(
     program: Option<&str>,
     args: Option<Vec<&str>>,
@@ -73,6 +77,7 @@ pub async fn get_current_ruleset<P: Process>(
     serde_json::from_str(&output).map_err(NftablesError::NftInvalidJson)
 }
 
+/// Get the current ruleset as a [String] payload instead of an [Nftables] instance.
 pub async fn get_current_ruleset_raw<P: Process>(
     program: Option<&str>,
     args: Option<Vec<&str>>,

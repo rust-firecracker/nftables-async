@@ -9,6 +9,10 @@ categories = ["network-programming"]
 repository = "https://github.com/kanpov/nftables-async"
 readme = "README.md"
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
 [dependencies]
 nftables = "0.5.0"
 serde_json = "1.0.133"
