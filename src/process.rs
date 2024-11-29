@@ -1,4 +1,6 @@
-use std::{future::Future, process::Stdio};
+use std::future::Future;
+#[cfg(any(feature = "tokio-process", feature = "async-process"))]
+use std::process::Stdio;
 
 use futures_util::AsyncWrite;
 #[cfg(feature = "tokio-process")]
