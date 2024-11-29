@@ -1,46 +1,41 @@
-use std::process::Stdio;
-
+use futures_util::AsyncWriteExt;
 use nftables::{helper::NftablesError, schema::Nftables};
-use tokio::{io::AsyncWriteExt, process::Command};
+use process::Process;
 
 const NFT_DEFAULT_PROGRAM: &str = "nft";
 
-pub async fn apply_ruleset(
+pub mod process;
+
+pub async fn apply_ruleset<P: Process>(
     nftables: &Nftables,
     program: Option<&str>,
     args: Option<Vec<&str>>,
 ) -> Result<(), NftablesError> {
     let payload = serde_json::to_string(nftables).map_err(NftablesError::NftInvalidJson)?;
-    apply_ruleset_raw(payload, program, args).await
+    apply_ruleset_raw::<P>(payload, program, args).await
 }
 
-pub async fn apply_ruleset_raw(
+pub async fn apply_ruleset_raw<P: Process>(
     payload: String,
     program: Option<&str>,
     args: Option<Vec<&str>>,
 ) -> Result<(), NftablesError> {
     let program = program.unwrap_or(NFT_DEFAULT_PROGRAM);
-    let mut command = Command::new(program);
-    command.arg("-j").arg("-f").arg("-");
+    let mut arg_vec = vec!["-j", "-f", "-"];
 
     if let Some(args) = args {
-        command.args(args);
+        arg_vec.extend(args);
     }
 
-    command
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-
-    let mut child = command.spawn().map_err(|err| NftablesError::NftExecution {
-        program: program.to_owned(),
-        inner: err,
-    })?;
+    let mut child =
+        P::spawn(program, arg_vec, true).map_err(|err| NftablesError::NftExecution {
+            program: program.to_owned(),
+            inner: err,
+        })?;
 
     let mut stdin = child
-        .stdin
-        .take()
-        .expect("Stdin was piped to Tokio but could not be retrieved");
+        .take_stdin()
+        .expect("Stdin was piped to the process but could not be retrieved");
     stdin
         .write_all(payload.as_bytes())
         .await
@@ -70,27 +65,25 @@ pub async fn apply_ruleset_raw(
     }
 }
 
-pub async fn get_current_ruleset(
+pub async fn get_current_ruleset<P: Process>(
     program: Option<&str>,
     args: Option<Vec<&str>>,
 ) -> Result<Nftables, NftablesError> {
-    let output = get_current_ruleset_raw(program, args).await?;
+    let output = get_current_ruleset_raw::<P>(program, args).await?;
     serde_json::from_str(&output).map_err(NftablesError::NftInvalidJson)
 }
 
-pub async fn get_current_ruleset_raw(
+pub async fn get_current_ruleset_raw<P: Process>(
     program: Option<&str>,
     args: Option<Vec<&str>>,
 ) -> Result<String, NftablesError> {
     let program = program.unwrap_or(NFT_DEFAULT_PROGRAM);
-    let mut command = Command::new(program);
-    command.arg("-j").arg("list").arg("ruleset");
+    let mut arg_vec = vec!["-j", "list", "ruleset"];
     if let Some(args) = args {
-        command.args(args);
+        arg_vec.extend(args);
     }
 
-    let output = command
-        .output()
+    let output = P::output(program, arg_vec)
         .await
         .map_err(|err| NftablesError::NftExecution {
             program: program.to_owned(),
