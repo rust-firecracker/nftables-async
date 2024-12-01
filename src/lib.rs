@@ -1,3 +1,5 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 use futures_util::AsyncWriteExt;
 use nftables::{helper::NftablesError, schema::Nftables};
 use process::Process;
