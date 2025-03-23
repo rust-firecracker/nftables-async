@@ -11,11 +11,11 @@ pub mod process;
 
 /// Apply the given [Nftables] ruleset, optionally overriding which "nft" binary to use and adding extra arguments.
 pub async fn apply_ruleset<P: Process>(
-    nftables: &Nftables,
+    nftables: Nftables<'_>,
     program: Option<&str>,
     args: Option<Vec<&str>>,
 ) -> Result<(), NftablesError> {
-    let payload = serde_json::to_string(nftables).map_err(NftablesError::NftInvalidJson)?;
+    let payload = serde_json::to_string(&nftables).map_err(NftablesError::NftInvalidJson)?;
     apply_ruleset_raw::<P>(payload, program, args).await
 }
 
@@ -34,7 +34,7 @@ pub async fn apply_ruleset_raw<P: Process>(
 
     let mut child =
         P::spawn(program, arg_vec, true).map_err(|err| NftablesError::NftExecution {
-            program: program.to_owned(),
+            program: program.to_owned().into(),
             inner: err,
         })?;
 
@@ -45,7 +45,7 @@ pub async fn apply_ruleset_raw<P: Process>(
         .write_all(payload.as_bytes())
         .await
         .map_err(|err| NftablesError::NftExecution {
-            program: program.to_owned(),
+            program: program.to_owned().into(),
             inner: err,
         })?;
     drop(stdin);
@@ -57,14 +57,14 @@ pub async fn apply_ruleset_raw<P: Process>(
             let stderr = read(program, output.stderr)?;
 
             Err(NftablesError::NftFailed {
-                program: program.to_owned(),
+                program: program.to_owned().into(),
                 hint: "applying ruleset".to_string(),
                 stdout,
                 stderr,
             })
         }
         Err(err) => Err(NftablesError::NftExecution {
-            program: program.to_owned(),
+            program: program.to_owned().into(),
             inner: err,
         }),
     }
@@ -74,7 +74,7 @@ pub async fn apply_ruleset_raw<P: Process>(
 pub async fn get_current_ruleset<P: Process>(
     program: Option<&str>,
     args: Option<Vec<&str>>,
-) -> Result<Nftables, NftablesError> {
+) -> Result<Nftables<'static>, NftablesError> {
     let output = get_current_ruleset_raw::<P>(program, args).await?;
     serde_json::from_str(&output).map_err(NftablesError::NftInvalidJson)
 }
@@ -93,7 +93,7 @@ pub async fn get_current_ruleset_raw<P: Process>(
     let output = P::output(program, arg_vec)
         .await
         .map_err(|err| NftablesError::NftExecution {
-            program: program.to_owned(),
+            program: program.to_owned().into(),
             inner: err,
         })?;
 
@@ -103,7 +103,7 @@ pub async fn get_current_ruleset_raw<P: Process>(
         let stderr = read(program, output.stderr)?;
 
         return Err(NftablesError::NftFailed {
-            program: program.to_owned(),
+            program: program.to_owned().into(),
             hint: "getting the current ruleset".to_string(),
             stdout,
             stderr,
@@ -116,7 +116,7 @@ pub async fn get_current_ruleset_raw<P: Process>(
 #[inline]
 fn read(program: &str, stream: Vec<u8>) -> Result<String, NftablesError> {
     String::from_utf8(stream).map_err(|err| NftablesError::NftOutputEncoding {
-        program: program.to_owned(),
+        program: program.to_owned().into(),
         inner: err,
     })
 }

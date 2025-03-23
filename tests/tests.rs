@@ -17,11 +17,11 @@ fn can_apply_ruleset() {
         let mut batch = Batch::new();
         batch.add_obj(NfListObject::Table(Table {
             family: NfFamily::INet,
-            name: format!("table{}", fastrand::u32(1..=10000)),
+            name: format!("table{}", fastrand::u32(1..=10000)).into(),
             handle: None,
         }));
 
-        wrapped_apply_ruleset(&batch.to_nftables(), is_tokio)
+        wrapped_apply_ruleset(batch.to_nftables(), is_tokio)
             .await
             .unwrap();
     });
@@ -34,20 +34,20 @@ fn can_get_current_ruleset() {
         let table_name = format!("table{}", fastrand::u32(1..=10000));
         batch.add_obj(NfListObject::Table(Table {
             family: NfFamily::INet,
-            name: table_name.clone(),
+            name: table_name.clone().into(),
             handle: None,
         }));
 
-        wrapped_apply_ruleset(&batch.to_nftables(), is_tokio)
+        wrapped_apply_ruleset(batch.to_nftables(), is_tokio)
             .await
             .unwrap();
 
         let current_ruleset = wrapped_get_current_ruleset(is_tokio).await.unwrap();
         let mut valid = false;
 
-        for object in current_ruleset.objects {
+        for object in current_ruleset.objects.iter() {
             match object {
-                NfObject::ListObject(object) => match *object {
+                NfObject::ListObject(object) => match object {
                     NfListObject::Table(table) if table.name == table_name => {
                         valid = true;
                     }
@@ -63,7 +63,10 @@ fn can_get_current_ruleset() {
     });
 }
 
-async fn wrapped_apply_ruleset(nftables: &Nftables, is_tokio: bool) -> Result<(), NftablesError> {
+async fn wrapped_apply_ruleset(
+    nftables: Nftables<'_>,
+    is_tokio: bool,
+) -> Result<(), NftablesError> {
     if is_tokio {
         apply_ruleset::<TokioProcess>(nftables, None, None).await
     } else {
@@ -71,7 +74,7 @@ async fn wrapped_apply_ruleset(nftables: &Nftables, is_tokio: bool) -> Result<()
     }
 }
 
-async fn wrapped_get_current_ruleset(is_tokio: bool) -> Result<Nftables, NftablesError> {
+async fn wrapped_get_current_ruleset(is_tokio: bool) -> Result<Nftables<'static>, NftablesError> {
     if is_tokio {
         get_current_ruleset::<TokioProcess>(None, None).await
     } else {
