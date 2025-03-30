@@ -68,9 +68,9 @@ async fn wrapped_apply_ruleset(
     is_tokio: bool,
 ) -> Result<(), NftablesError> {
     if is_tokio {
-        apply_ruleset::<TokioProcess>(nftables, None, None).await
+        apply_ruleset::<TokioProcess>(&nftables, None, None).await
     } else {
-        apply_ruleset::<AsyncProcess>(nftables, None, None).await
+        apply_ruleset::<AsyncProcess>(&nftables, None, None).await
     }
 }
 

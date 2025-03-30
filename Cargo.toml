@@ -1,6 +1,6 @@
 [package]
 name = "nftables-async"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 description = "An async version of the helper to run nftables, providing full compatibility with the rest of the nftables crate"
 license = "MIT"

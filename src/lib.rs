@@ -11,11 +11,11 @@ pub mod process;
 
 /// Apply the given [Nftables] ruleset, optionally overriding which "nft" binary to use and adding extra arguments.
 pub async fn apply_ruleset<P: Process>(
-    nftables: Nftables<'_>,
+    nftables: &Nftables<'_>,
     program: Option<&str>,
     args: Option<Vec<&str>>,
 ) -> Result<(), NftablesError> {
-    let payload = serde_json::to_string(&nftables).map_err(NftablesError::NftInvalidJson)?;
+    let payload = serde_json::to_string(nftables).map_err(NftablesError::NftInvalidJson)?;
     apply_ruleset_raw::<P>(payload, program, args).await
 }
 
