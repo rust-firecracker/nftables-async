@@ -1,21 +1,22 @@
-use std::future::Future;
-#[cfg(any(feature = "tokio-process", feature = "async-process"))]
+#[cfg(any(feature = "tokio-driver", feature = "async-process-driver"))]
 use std::process::Stdio;
+use std::{ffi::OsStr, future::Future};
 
 use futures_util::AsyncWrite;
-#[cfg(feature = "tokio-process")]
+#[cfg(feature = "tokio-driver")]
 use tokio_util::compat::TokioAsyncWriteCompatExt;
 
-/// A process backend to use for asynchronous I/O, supporting only the functionality needed by
+/// A process driver to use for asynchronous I/O, supporting only the functionality needed by
 /// the nftables-async crate.
-pub trait Process: Send + Sized {
+pub trait Driver: Send + Sized {
     type Stdin: AsyncWrite + Send + Unpin;
 
-    fn spawn(program: &str, args: Vec<&str>, pipe_output: bool) -> Result<Self, std::io::Error>;
+    fn spawn(program: &OsStr, args: Vec<&OsStr>, pipe_output: bool)
+        -> Result<Self, std::io::Error>;
 
     fn output(
-        program: &str,
-        args: Vec<&str>,
+        program: &OsStr,
+        args: Vec<&OsStr>,
     ) -> impl Future<Output = Result<std::process::Output, std::io::Error>> + Send;
 
     fn take_stdin(&mut self) -> Option<Self::Stdin>;
@@ -25,17 +26,21 @@ pub trait Process: Send + Sized {
     ) -> impl Future<Output = Result<std::process::Output, std::io::Error>> + Send;
 }
 
-/// A [Process] implementation using the tokio crate for I/O.
-#[cfg(feature = "tokio-process")]
+/// A [Driver] implementation using the tokio crate for I/O.
+#[cfg(feature = "tokio-driver")]
 #[cfg_attr(docsrs, doc(cfg(feature = "tokio-process")))]
-pub struct TokioProcess(tokio::process::Child);
+pub struct TokioDriver(tokio::process::Child);
 
-#[cfg(feature = "tokio-process")]
+#[cfg(feature = "tokio-driver")]
 #[cfg_attr(docsrs, doc(cfg(feature = "tokio-process")))]
-impl Process for TokioProcess {
+impl Driver for TokioDriver {
     type Stdin = tokio_util::compat::Compat<tokio::process::ChildStdin>;
 
-    fn spawn(program: &str, args: Vec<&str>, pipe_output: bool) -> Result<Self, std::io::Error> {
+    fn spawn(
+        program: &OsStr,
+        args: Vec<&OsStr>,
+        pipe_output: bool,
+    ) -> Result<Self, std::io::Error> {
         let mut command = tokio::process::Command::new(program);
 
         command.args(args);
@@ -51,8 +56,8 @@ impl Process for TokioProcess {
     }
 
     fn output(
-        program: &str,
-        args: Vec<&str>,
+        program: &OsStr,
+        args: Vec<&OsStr>,
     ) -> impl Future<Output = Result<std::process::Output, std::io::Error>> + Send {
         let mut command = tokio::process::Command::new(program);
         command.args(args).output()
@@ -69,17 +74,21 @@ impl Process for TokioProcess {
     }
 }
 
-/// A [Process] implementation using the async-process crate for I/O.
-#[cfg(feature = "async-process")]
+/// A [Driver] implementation using the async-process crate for I/O.
+#[cfg(feature = "async-process-driver")]
 #[cfg_attr(docsrs, doc(cfg(feature = "async-process")))]
-pub struct AsyncProcess(async_process::Child);
+pub struct AsyncProcessDriver(async_process::Child);
 
-#[cfg(feature = "async-process")]
+#[cfg(feature = "async-process-driver")]
 #[cfg_attr(docsrs, doc(cfg(feature = "async-process")))]
-impl Process for AsyncProcess {
+impl Driver for AsyncProcessDriver {
     type Stdin = async_process::ChildStdin;
 
-    fn spawn(program: &str, args: Vec<&str>, pipe_output: bool) -> Result<Self, std::io::Error> {
+    fn spawn(
+        program: &OsStr,
+        args: Vec<&OsStr>,
+        pipe_output: bool,
+    ) -> Result<Self, std::io::Error> {
         let mut command = async_process::Command::new(program);
         command.args(args);
 
@@ -94,8 +103,8 @@ impl Process for AsyncProcess {
     }
 
     fn output(
-        program: &str,
-        args: Vec<&str>,
+        program: &OsStr,
+        args: Vec<&OsStr>,
     ) -> impl Future<Output = Result<std::process::Output, std::io::Error>> + Send {
         let mut command = async_process::Command::new(program);
         command.args(args).output()

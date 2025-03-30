@@ -37,6 +37,6 @@ nftables-async = { path = ".", features = ["full"] }
 
 [features]
 default = []
-full = ["tokio-process", "async-process"]
-tokio-process = ["dep:tokio", "dep:tokio-util"]
-async-process = ["dep:async-process"]
+full = ["tokio-driver", "async-process-driver"]
+tokio-driver = ["dep:tokio", "dep:tokio-util"]
+async-process-driver = ["dep:async-process"]

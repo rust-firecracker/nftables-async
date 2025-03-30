@@ -7,8 +7,8 @@ use nftables::{
     types::NfFamily,
 };
 use nftables_async::{
-    apply_ruleset, get_current_ruleset,
-    process::{AsyncProcess, TokioProcess},
+    driver::{AsyncProcessDriver, TokioDriver},
+    helper::Helper,
 };
 
 #[test]
@@ -68,17 +68,17 @@ async fn wrapped_apply_ruleset(
     is_tokio: bool,
 ) -> Result<(), NftablesError> {
     if is_tokio {
-        apply_ruleset::<TokioProcess>(&nftables, None, None).await
+        TokioDriver::apply_ruleset(&nftables).await
     } else {
-        apply_ruleset::<AsyncProcess>(&nftables, None, None).await
+        AsyncProcessDriver::apply_ruleset(&nftables).await
     }
 }
 
 async fn wrapped_get_current_ruleset(is_tokio: bool) -> Result<Nftables<'static>, NftablesError> {
     if is_tokio {
-        get_current_ruleset::<TokioProcess>(None, None).await
+        TokioDriver::get_current_ruleset().await
     } else {
-        get_current_ruleset::<AsyncProcess>(None, None).await
+        AsyncProcessDriver::get_current_ruleset().await
     }
 }
 
