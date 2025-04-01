@@ -10,7 +10,7 @@ use crate::driver::Driver;
 
 pub trait Helper {
     fn apply_ruleset(
-        nftables: &Nftables<'_>,
+        nftables: &Nftables,
     ) -> impl Future<Output = Result<(), NftablesError>> + Send {
         Self::apply_ruleset_with_args(nftables, DEFAULT_NFT, DEFAULT_ARGS)
     }
@@ -21,7 +21,7 @@ pub trait Helper {
         A: AsRef<OsStr> + Sync + ?Sized + 'a,
         I: IntoIterator<Item = &'a A> + Send,
     >(
-        nftables: &Nftables<'_>,
+        nftables: &Nftables,
         program: Option<&P>,
         args: I,
     ) -> impl Future<Output = Result<(), NftablesError>> + Send {
