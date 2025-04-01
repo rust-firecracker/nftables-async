@@ -1,6 +1,6 @@
 #[cfg(any(feature = "tokio-driver", feature = "async-process-driver"))]
 use std::process::Stdio;
-use std::{ffi::OsStr, future::Future};
+use std::{ffi::OsStr, future::Future, process::Output};
 
 use futures_util::AsyncWrite;
 #[cfg(feature = "tokio-driver")]
@@ -11,19 +11,16 @@ use tokio_util::compat::TokioAsyncWriteCompatExt;
 pub trait Driver: Send + Sized {
     type Stdin: AsyncWrite + Send + Unpin;
 
-    fn spawn(program: &OsStr, args: Vec<&OsStr>, pipe_output: bool)
-        -> Result<Self, std::io::Error>;
+    fn spawn(program: &OsStr, args: &[&OsStr], pipe_output: bool) -> Result<Self, std::io::Error>;
 
     fn output(
         program: &OsStr,
-        args: Vec<&OsStr>,
-    ) -> impl Future<Output = Result<std::process::Output, std::io::Error>> + Send;
+        args: &[&OsStr],
+    ) -> impl Future<Output = Result<Output, std::io::Error>> + Send;
 
     fn take_stdin(&mut self) -> Option<Self::Stdin>;
 
-    fn wait_with_output(
-        self,
-    ) -> impl Future<Output = Result<std::process::Output, std::io::Error>> + Send;
+    fn wait_with_output(self) -> impl Future<Output = Result<Output, std::io::Error>> + Send;
 }
 
 /// A [Driver] implementation using the tokio crate for I/O.
@@ -36,11 +33,7 @@ pub struct TokioDriver(tokio::process::Child);
 impl Driver for TokioDriver {
     type Stdin = tokio_util::compat::Compat<tokio::process::ChildStdin>;
 
-    fn spawn(
-        program: &OsStr,
-        args: Vec<&OsStr>,
-        pipe_output: bool,
-    ) -> Result<Self, std::io::Error> {
+    fn spawn(program: &OsStr, args: &[&OsStr], pipe_output: bool) -> Result<Self, std::io::Error> {
         let mut command = tokio::process::Command::new(program);
 
         command.args(args);
@@ -57,8 +50,8 @@ impl Driver for TokioDriver {
 
     fn output(
         program: &OsStr,
-        args: Vec<&OsStr>,
-    ) -> impl Future<Output = Result<std::process::Output, std::io::Error>> + Send {
+        args: &[&OsStr],
+    ) -> impl Future<Output = Result<Output, std::io::Error>> + Send {
         let mut command = tokio::process::Command::new(program);
         command.args(args).output()
     }
@@ -67,9 +60,7 @@ impl Driver for TokioDriver {
         self.0.stdin.take().map(|stdin| stdin.compat_write())
     }
 
-    fn wait_with_output(
-        self,
-    ) -> impl Future<Output = Result<std::process::Output, std::io::Error>> + Send {
+    fn wait_with_output(self) -> impl Future<Output = Result<Output, std::io::Error>> + Send {
         self.0.wait_with_output()
     }
 }
@@ -84,11 +75,7 @@ pub struct AsyncProcessDriver(async_process::Child);
 impl Driver for AsyncProcessDriver {
     type Stdin = async_process::ChildStdin;
 
-    fn spawn(
-        program: &OsStr,
-        args: Vec<&OsStr>,
-        pipe_output: bool,
-    ) -> Result<Self, std::io::Error> {
+    fn spawn(program: &OsStr, args: &[&OsStr], pipe_output: bool) -> Result<Self, std::io::Error> {
         let mut command = async_process::Command::new(program);
         command.args(args);
 
@@ -104,8 +91,8 @@ impl Driver for AsyncProcessDriver {
 
     fn output(
         program: &OsStr,
-        args: Vec<&OsStr>,
-    ) -> impl Future<Output = Result<std::process::Output, std::io::Error>> + Send {
+        args: &[&OsStr],
+    ) -> impl Future<Output = Result<Output, std::io::Error>> + Send {
         let mut command = async_process::Command::new(program);
         command.args(args).output()
     }
@@ -114,9 +101,7 @@ impl Driver for AsyncProcessDriver {
         self.0.stdin.take()
     }
 
-    fn wait_with_output(
-        self,
-    ) -> impl Future<Output = Result<std::process::Output, std::io::Error>> + Send {
+    fn wait_with_output(self) -> impl Future<Output = Result<Output, std::io::Error>> + Send {
         self.0.output()
     }
 }

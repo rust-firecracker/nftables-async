@@ -84,15 +84,16 @@ impl<D: Driver> Helper for D {
         args: I,
     ) -> Result<(), NftablesError> {
         let program = program.map(|v| v.as_ref()).unwrap_or(OsStr::new("nft"));
-        let mut default_args = vec![OsStr::new("-j"), OsStr::new("-f"), OsStr::new("-")];
+        let mut all_args = vec![OsStr::new("-j"), OsStr::new("-f"), OsStr::new("-")];
 
-        default_args.extend(args.into_iter().map(|v| v.as_ref()));
+        all_args.extend(args.into_iter().map(|v| v.as_ref()));
 
-        let mut child =
-            D::spawn(&program, default_args, true).map_err(|err| NftablesError::NftExecution {
+        let mut child = D::spawn(&program, all_args.as_slice(), true).map_err(|err| {
+            NftablesError::NftExecution {
                 program: program.to_owned().into(),
                 inner: err,
-            })?;
+            }
+        })?;
 
         let mut stdin = child
             .take_stdin()
@@ -136,17 +137,16 @@ impl<D: Driver> Helper for D {
         args: I,
     ) -> Result<String, NftablesError> {
         let program = program.map(|v| v.as_ref()).unwrap_or(OsStr::new("nft"));
-        let mut default_args = vec![OsStr::new("-j"), OsStr::new("list"), OsStr::new("ruleset")];
+        let mut all_args = vec![OsStr::new("-j"), OsStr::new("list"), OsStr::new("ruleset")];
 
-        default_args.extend(args.into_iter().map(|v| v.as_ref()));
+        all_args.extend(args.into_iter().map(|v| v.as_ref()));
 
-        let output =
-            D::output(program, default_args)
-                .await
-                .map_err(|err| NftablesError::NftExecution {
-                    program: program.to_owned().into(),
-                    inner: err,
-                })?;
+        let output = D::output(program, all_args.as_slice())
+            .await
+            .map_err(|err| NftablesError::NftExecution {
+                program: program.to_owned().into(),
+                inner: err,
+            })?;
 
         let stdout = read(&program, output.stdout)?;
 
