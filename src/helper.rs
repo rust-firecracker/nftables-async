@@ -1,12 +1,11 @@
 use std::{ffi::OsStr, future::Future};
 
-use futures_util::{AsyncWriteExt, FutureExt};
 use nftables::{
     helper::{NftablesError, DEFAULT_ARGS, DEFAULT_NFT},
     schema::Nftables,
 };
 
-use crate::driver::Driver;
+use crate::{driver::Driver, util::MapFuture};
 
 pub trait Helper {
     fn apply_ruleset(
@@ -55,10 +54,14 @@ pub trait Helper {
         program: Option<&P>,
         args: I,
     ) -> impl Future<Output = Result<Nftables<'static>, NftablesError>> + Send {
-        Self::get_current_ruleset_raw(program, args).map(|result| {
-            serde_json::from_str::<Nftables<'static>>(&result?)
-                .map_err(NftablesError::NftInvalidJson)
-        })
+        MapFuture::new(
+            Self::get_current_ruleset_raw(program, args),
+            |result: Result<String, NftablesError>| {
+                result.and_then(|output| {
+                    serde_json::from_str(&output).map_err(NftablesError::NftInvalidJson)
+                })
+            },
+        )
     }
 
     fn get_current_ruleset_raw<
@@ -88,26 +91,22 @@ impl<D: Driver> Helper for D {
 
         all_args.extend(args.into_iter().map(|v| v.as_ref()));
 
-        let mut child = D::spawn(&program, all_args.as_slice(), true).map_err(|err| {
+        let mut driver = D::spawn(&program, all_args.as_slice(), true).map_err(|err| {
             NftablesError::NftExecution {
                 program: program.to_owned().into(),
                 inner: err,
             }
         })?;
 
-        let mut stdin = child
-            .take_stdin()
-            .expect("Stdin was piped to the process but could not be retrieved");
-        stdin
-            .write_all(payload.as_bytes())
+        driver
+            .fill_stdin(payload.as_bytes())
             .await
             .map_err(|err| NftablesError::NftExecution {
                 program: program.to_owned().into(),
                 inner: err,
             })?;
-        drop(stdin);
 
-        match child.wait_with_output().await {
+        match driver.wait_with_output().await {
             Ok(output) if output.status.success() => Ok(()),
             Ok(output) => {
                 let stdout = read(&program, output.stdout)?;

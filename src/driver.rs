@@ -2,15 +2,14 @@
 use std::process::Stdio;
 use std::{ffi::OsStr, future::Future, process::Output};
 
-use futures_util::AsyncWrite;
+#[cfg(feature = "async-process-driver")]
+use futures_lite::AsyncWriteExt as FuturesAsyncWriteExt;
 #[cfg(feature = "tokio-driver")]
-use tokio_util::compat::TokioAsyncWriteCompatExt;
+use tokio::io::AsyncWriteExt as TokioAsyncWriteExt;
 
 /// A process driver to use for asynchronous I/O, supporting only the functionality needed by
 /// the nftables-async crate.
 pub trait Driver: Send + Sized {
-    type Stdin: AsyncWrite + Send + Unpin;
-
     fn spawn(program: &OsStr, args: &[&OsStr], pipe_output: bool) -> Result<Self, std::io::Error>;
 
     fn output(
@@ -18,7 +17,10 @@ pub trait Driver: Send + Sized {
         args: &[&OsStr],
     ) -> impl Future<Output = Result<Output, std::io::Error>> + Send;
 
-    fn take_stdin(&mut self) -> Option<Self::Stdin>;
+    fn fill_stdin(
+        &mut self,
+        payload: &[u8],
+    ) -> impl Future<Output = Result<(), std::io::Error>> + Send;
 
     fn wait_with_output(self) -> impl Future<Output = Result<Output, std::io::Error>> + Send;
 }
@@ -31,8 +33,6 @@ pub struct TokioDriver(tokio::process::Child);
 #[cfg(feature = "tokio-driver")]
 #[cfg_attr(docsrs, doc(cfg(feature = "tokio-process")))]
 impl Driver for TokioDriver {
-    type Stdin = tokio_util::compat::Compat<tokio::process::ChildStdin>;
-
     fn spawn(program: &OsStr, args: &[&OsStr], pipe_output: bool) -> Result<Self, std::io::Error> {
         let mut command = tokio::process::Command::new(program);
 
@@ -56,8 +56,18 @@ impl Driver for TokioDriver {
         command.args(args).output()
     }
 
-    fn take_stdin(&mut self) -> Option<Self::Stdin> {
-        self.0.stdin.take().map(|stdin| stdin.compat_write())
+    async fn fill_stdin(&mut self, payload: &[u8]) -> Result<(), std::io::Error> {
+        self.0
+            .stdin
+            .take()
+            .ok_or_else(|| {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Stdin not redirected successfully",
+                )
+            })?
+            .write_all(payload)
+            .await
     }
 
     fn wait_with_output(self) -> impl Future<Output = Result<Output, std::io::Error>> + Send {
@@ -73,8 +83,6 @@ pub struct AsyncProcessDriver(async_process::Child);
 #[cfg(feature = "async-process-driver")]
 #[cfg_attr(docsrs, doc(cfg(feature = "async-process")))]
 impl Driver for AsyncProcessDriver {
-    type Stdin = async_process::ChildStdin;
-
     fn spawn(program: &OsStr, args: &[&OsStr], pipe_output: bool) -> Result<Self, std::io::Error> {
         let mut command = async_process::Command::new(program);
         command.args(args);
@@ -97,8 +105,18 @@ impl Driver for AsyncProcessDriver {
         command.args(args).output()
     }
 
-    fn take_stdin(&mut self) -> Option<Self::Stdin> {
-        self.0.stdin.take()
+    async fn fill_stdin(&mut self, payload: &[u8]) -> Result<(), std::io::Error> {
+        self.0
+            .stdin
+            .take()
+            .ok_or_else(|| {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Stdin not redirected successfully",
+                )
+            })?
+            .write_all(payload)
+            .await
     }
 
     fn wait_with_output(self) -> impl Future<Output = Result<Output, std::io::Error>> + Send {
