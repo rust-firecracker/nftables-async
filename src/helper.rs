@@ -93,7 +93,7 @@ impl<D: Driver> Helper for D {
 
         let mut driver = D::run_interactive(&program, all_args.as_slice()).map_err(|err| {
             NftablesError::NftExecution {
-                program: program.to_owned().into(),
+                program: program.into(),
                 inner: err,
             }
         })?;
@@ -102,7 +102,7 @@ impl<D: Driver> Helper for D {
             .fill_stdin(payload.as_bytes())
             .await
             .map_err(|err| NftablesError::NftExecution {
-                program: program.to_owned().into(),
+                program: program.into(),
                 inner: err,
             })?;
 
@@ -113,14 +113,14 @@ impl<D: Driver> Helper for D {
                 let stderr = read(&program, output.stderr)?;
 
                 Err(NftablesError::NftFailed {
-                    program: program.to_owned().into(),
+                    program: program.into(),
                     hint: "applying ruleset".to_string(),
                     stdout,
                     stderr,
                 })
             }
             Err(err) => Err(NftablesError::NftExecution {
-                program: program.to_owned().into(),
+                program: program.into(),
                 inner: err,
             }),
         }
@@ -142,7 +142,7 @@ impl<D: Driver> Helper for D {
 
         let output = D::run(program, all_args.as_slice()).await.map_err(|err| {
             NftablesError::NftExecution {
-                program: program.to_owned().into(),
+                program: program.into(),
                 inner: err,
             }
         })?;
@@ -153,7 +153,7 @@ impl<D: Driver> Helper for D {
             let stderr = read(&program, output.stderr)?;
 
             return Err(NftablesError::NftFailed {
-                program: program.to_owned().into(),
+                program: program.into(),
                 hint: "getting the current ruleset".to_string(),
                 stdout,
                 stderr,
@@ -167,7 +167,7 @@ impl<D: Driver> Helper for D {
 #[inline]
 fn read(program: &OsStr, stream: Vec<u8>) -> Result<String, NftablesError> {
     String::from_utf8(stream).map_err(|err| NftablesError::NftOutputEncoding {
-        program: program.to_owned().into(),
+        program: program.into(),
         inner: err,
     })
 }
