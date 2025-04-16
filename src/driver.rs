@@ -7,8 +7,6 @@ use std::process::Stdio;
 #[cfg(feature = "tokio-driver")]
 use tokio::io::AsyncWriteExt as TokioAsyncWriteExt;
 
-/// A process driver to use for asynchronous I/O, supporting only the functionality needed by
-/// the nftables-async crate.
 pub trait Driver: Send + Sized {
     fn run_process(
         program: &OsStr,

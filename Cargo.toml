@@ -31,8 +31,7 @@ fastrand = "2.3.0"
 nftables-async = { path = ".", features = ["full"] }
 
 [features]
-default = ["helper"]
-helper = []
-full = ["helper", "tokio-driver", "async-process-driver"]
+default = []
+full = ["tokio-driver", "async-process-driver"]
 tokio-driver = ["dep:tokio"]
 async-process-driver = ["dep:async-process", "dep:futures-lite"]
