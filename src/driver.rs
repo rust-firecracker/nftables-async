@@ -7,7 +7,13 @@ use std::process::Stdio;
 #[cfg(feature = "tokio-driver")]
 use tokio::io::AsyncWriteExt as TokioAsyncWriteExt;
 
-pub trait Driver: Send + Sized {
+/// A process driver internally used by the helper to run the "nft" process asynchronously, write to its stdin and
+/// retrieve its output.
+pub trait Driver {
+    /// Run the provided program with the provided arguments and retrieve its output.
+    /// If stdin is [None], stdin should be nulled by the driver and no interaction should occur with the process.
+    /// If stdin is [Some], stdin should be piped and the byte payload as well as a subsequent EOF (closure of the pipe)
+    /// should be transmitted before the process is waited on.
     fn run_process(
         program: &OsStr,
         args: &[&OsStr],

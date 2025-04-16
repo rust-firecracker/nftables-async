@@ -7,13 +7,17 @@ use nftables::{
 
 use crate::{driver::Driver, util::MapFuture};
 
+/// A helper that provides asynchronous "nft" invocations with nftables-crate types, backed by a [Driver].
+/// As such, the [Helper] trait is implemented for every [Driver].
 pub trait Helper {
+    /// Apply a [Nftables] ruleset.
     fn apply_ruleset(
         nftables: &Nftables,
     ) -> impl Future<Output = Result<(), NftablesError>> + Send {
         Self::apply_ruleset_with_args(nftables, DEFAULT_NFT, DEFAULT_ARGS)
     }
 
+    /// Apply a [Nftables] ruleset with, optionally, a custom "nft" program and extra arguments.
     fn apply_ruleset_with_args<
         'a,
         P: AsRef<OsStr> + Sync + ?Sized,
@@ -29,6 +33,8 @@ pub trait Helper {
         Self::apply_ruleset_raw(payload, program, args)
     }
 
+    /// Apply a ruleset consisting of an untyped [String] payload with, optionally, a custom "nft" program and
+    /// extra arguments.
     fn apply_ruleset_raw<
         'a,
         P: AsRef<OsStr> + Sync + ?Sized,
@@ -40,11 +46,13 @@ pub trait Helper {
         args: I,
     ) -> impl Future<Output = Result<(), NftablesError>> + Send;
 
+    /// Get the current [Nftables] ruleset.
     fn get_current_ruleset() -> impl Future<Output = Result<Nftables<'static>, NftablesError>> + Send
     {
         Self::get_current_ruleset_with_args(DEFAULT_NFT, DEFAULT_ARGS)
     }
 
+    /// Get the current [Nftables] ruleset with, optionally, a custom "nft" program and extra arguments.
     fn get_current_ruleset_with_args<
         'a,
         P: AsRef<OsStr> + Sync + ?Sized,
@@ -64,6 +72,8 @@ pub trait Helper {
         )
     }
 
+    /// Get the current ruleset as an untyped [String] payload with, optionally, a custom "nft" program and
+    /// extra arguments.
     fn get_current_ruleset_raw<
         'a,
         P: AsRef<OsStr> + Sync + ?Sized,
