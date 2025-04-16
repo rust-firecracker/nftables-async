@@ -91,22 +91,7 @@ impl<D: Driver> Helper for D {
 
         all_args.extend(args.into_iter().map(|v| v.as_ref()));
 
-        let mut driver = D::run_interactive(&program, all_args.as_slice()).map_err(|err| {
-            NftablesError::NftExecution {
-                program: program.into(),
-                inner: err,
-            }
-        })?;
-
-        driver
-            .fill_stdin(payload.as_bytes())
-            .await
-            .map_err(|err| NftablesError::NftExecution {
-                program: program.into(),
-                inner: err,
-            })?;
-
-        match driver.wait().await {
+        match D::run_process(&program, all_args.as_slice(), Some(payload.as_bytes())).await {
             Ok(output) if output.status.success() => Ok(()),
             Ok(output) => {
                 let stdout = read(&program, output.stdout)?;
@@ -140,12 +125,12 @@ impl<D: Driver> Helper for D {
 
         all_args.extend(args.into_iter().map(|v| v.as_ref()));
 
-        let output = D::run(program, all_args.as_slice()).await.map_err(|err| {
-            NftablesError::NftExecution {
+        let output = D::run_process(program, all_args.as_slice(), None)
+            .await
+            .map_err(|err| NftablesError::NftExecution {
                 program: program.into(),
                 inner: err,
-            }
-        })?;
+            })?;
 
         let stdout = read(&program, output.stdout)?;
 
